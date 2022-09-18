@@ -1,0 +1,5 @@
+rootProject.name = 'quartz'
+include 'java'
+include 'java-spring'
+include 'java-quarkus'
+
