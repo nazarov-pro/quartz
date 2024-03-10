@@ -1,5 +1,5 @@
 rootProject.name = 'quartz'
 include 'common'
-include 'spring'
+include 'plain'
 include 'quarkus'
-
+include 'spring'

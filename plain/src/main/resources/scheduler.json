@@ -1,0 +1,27 @@
+{
+  "enabled": true,
+  "maxExecutionTime": "PT1m",
+  "groups": {
+    "group1": {
+      "name": "groupNumberOne",
+      "jobs": {
+        "job1": {
+          "name": "jobNumberOne",
+          "description": "just a job",
+          "jobClass": "com.quartz.plain.job.SimpleJob",
+          "interruptionEnabled": false,
+          "triggers": {
+            "trigger1": {
+              "name": "triggerNumberOne",
+              "description": "just a trigger",
+              "schedule": {
+                "type": "CRON",
+                "expression": "0 0 0 1 1 ? 2019"
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

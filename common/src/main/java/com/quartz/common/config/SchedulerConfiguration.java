@@ -2,14 +2,15 @@ package com.quartz.common.config;
 
 import com.quartz.common.scheduler.QuartzInterruptibleJob;
 import com.quartz.common.scheduler.QuartzJob;
+import lombok.Getter;
+import lombok.RequiredArgsConstructor;
 
 import java.time.Duration;
 import java.time.OffsetDateTime;
 import java.time.temporal.ChronoUnit;
-import java.time.temporal.TemporalUnit;
 import java.util.Map;
 import java.util.Optional;
-import java.util.concurrent.TimeUnit;
+import java.util.TimeZone;
 
 /**
  * SchedulerConfiguration model contains configuration for scheduler, jobs and triggers
@@ -23,7 +24,7 @@ public interface SchedulerConfiguration {
      *
      * @return all job groups of the service
      */
-    Map<String, JobGroup> groups();
+    Map<String, ? extends JobGroup> groups();
 
     /**
      * If it is enabled then all jobs and triggers will be configured and scheduler will start
@@ -36,20 +37,20 @@ public interface SchedulerConfiguration {
     }
 
     /**
-     * Timeout in seconds for the jobs (it can be used in job implementation)
+     * Timeout duration for the jobs (it can be used in job implementation)
      *
      * @return max time out for the job execution
      */
-    Duration maxExecutionTime();
+    Duration maxExecutionDuration();
 
     /**
      * It will wait additionally 10% of max timeout (for recovering and failing gracefully)
      *
-     * @return max execution time + 10% of max execution time
+     * @return max execution duration + 10% of max execution duration
      */
-    default Duration maxWaitTime() {
+    default Duration maxWaitDuration() {
         return Duration.of(
-                (long) (maxExecutionTime().toMillis() * (1 + MAX_ADDITIONAL_WAIT_TIME_IN_PERCENTAGE)),
+                (long) (maxExecutionDuration().toMillis() * (1 + MAX_ADDITIONAL_WAIT_TIME_IN_PERCENTAGE)),
                 ChronoUnit.MILLIS
         );
     }
@@ -74,7 +75,7 @@ public interface SchedulerConfiguration {
          *
          * @return all jobs of the specific job group
          */
-        Map<String, JobDetail> jobs();
+        Map<String, ? extends JobDetail> jobs();
 
         /**
          * JobDetail defines detailed information about the job
@@ -120,7 +121,7 @@ public interface SchedulerConfiguration {
              *
              * @return all triggers of the specific job
              */
-            Map<String, Trigger> triggers();
+            Map<String, ? extends Trigger> triggers();
 
             /**
              * Trigger details
@@ -142,11 +143,11 @@ public interface SchedulerConfiguration {
                 Optional<String> description();
 
                 /**
-                 * Defines the cron value of the trigger
+                 * Defines the schedule of the trigger
                  *
-                 * @return cron value
+                 * @return schedule of the trigger
                  */
-                String cron();
+                Schedule schedule();
 
                 /**
                  * It defines when the trigger will finalize and marked as completed.
@@ -163,6 +164,62 @@ public interface SchedulerConfiguration {
                  * @return start date of the trigger
                  */
                 Optional<OffsetDateTime> startDate();
+
+                /**
+                 * It defines the priority of the trigger
+                 * If it is null, it will be 0
+                 *
+                 * @return priority of the trigger
+                 */
+                default int priority() {
+                    return 0;
+                }
+
+                @RequiredArgsConstructor
+                @Getter
+                enum MisfireInstructions {
+                    IGNORE("ignore"),
+                    DO_NOTHING("do_nothing"),
+                    FIRE_NOW("fire_now"),
+                    RESCHEDULE_NOW_WITH_EXISTING_REPEAT_COUNT("reschedule_now_with_existing_repeat_count"),
+                    RESCHEDULE_NOW_WITH_REMAINING_REPEAT_COUNT("reschedule_now_with_remaining_repeat_count"),
+                    RESCHEDULE_NEXT_WITH_EXISTING_REPEAT_COUNT("reschedule_next_with_existing_repeat_count"),
+                    RESCHEDULE_NEXT_WITH_REMAINING_REPEAT_COUNT("reschedule_next_with_remaining_repeat_count");
+
+                    private final String name;
+                }
+
+                @Getter
+                @RequiredArgsConstructor
+                enum ScheduleTypes {
+                    CRON("cron"),
+                    SIMPLE("simple"),
+                    DAILY("daily"),
+                    WEEKLY("weekly"),
+                    MONTHLY("monthly");
+
+                    private final String name;
+                }
+
+                interface Schedule {
+                    ScheduleTypes type();
+                }
+
+                interface CronSchedule extends Schedule {
+                    default ScheduleTypes type() {
+                        return ScheduleTypes.CRON;
+                    }
+
+                    String expression();
+
+                    default TimeZone timezone() {
+                        return TimeZone.getDefault();
+                    }
+
+                    default MisfireInstructions misfireInstruction() {
+                        return MisfireInstructions.DO_NOTHING;
+                    }
+                }
 
             }
         }

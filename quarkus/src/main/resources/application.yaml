@@ -1,0 +1,13 @@
+quarkus:
+  quartz:
+    clustered: true
+    store-type: jdbc-cmt
+    misfire-policy:
+      task-job: ignore-misfire-policy
+  #datasource configuration
+  datasource:
+    db-kind: postgresql
+    username: postgres
+    password: postgre
+    jdbc:
+      url: jdbc:postgresql://localhost:5432/quarkus

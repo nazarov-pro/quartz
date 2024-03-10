@@ -1,0 +1,15 @@
+spring:
+  quartz:
+    job-store-type: jdbc
+    jdbc:
+      initialize-schema: never
+  # use postgres
+  datasource:
+    jdbcUrl: jdbc:postgresql://localhost:5432/postgres_db?currentSchema=scheduler
+    username: postgres
+    password: postgre$
+    driver-class-name: org.postgresql.Driver
+app:
+  quartz-scheduler:
+    configPath: classpath:scheduler.json
+    enabled: true

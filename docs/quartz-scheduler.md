@@ -3,7 +3,6 @@
 ## Database structure ##
 
 All quartz tables (**QRTZ_** prefix) are available in **scheduler** schema (trace db).
-Migration file: [Schema Creation](../src/main/resources/db/migration/common/V200__sheduler_create_schema.sql), [Table Creation](../src/main/resources/db/migration/common/V201__sheduler_quartz_tables.sql)
 
 | Table name | Description |
 | ---------- | ----------- |
@@ -20,7 +19,9 @@ Migration file: [Schema Creation](../src/main/resources/db/migration/common/V200
 | QRTZ_TRIGGER_LISTENERS | Stores information about configured triggerListeners |
 | QRTZ_TRIGGERS | Stores information about configured triggers |
 
-## Trace implementation of Quartz scheduler #
+Note: [Migration File](../infra/docker/quartz_sheduler_ddl.sql)
+
+## Quartz Scheduler #
 
 There are 5 classes in trace scheduler implementation:
 

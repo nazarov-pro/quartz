@@ -1,0 +1,28 @@
+version: '3'
+
+services:
+  quartz_postgres:
+    container_name: quartz_postgres
+    image: postgres:14-alpine
+    hostname: ${POSTGRES_HOST}
+    restart: always
+    ports:
+      - ${POSTGRES_PORT}:5432
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_ROOT_PASSWORD: ${POSTGRES_ROOT_PASSWORD}
+    volumes:
+      - quartz_postgres:/var/lib/postgresql/data
+      - ./quartz_sheduler_ddl.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - quartz_bridge
+
+networks:
+  quartz_bridge:
+    driver: bridge
+
+volumes:
+  quartz_postgres:
+    driver: local

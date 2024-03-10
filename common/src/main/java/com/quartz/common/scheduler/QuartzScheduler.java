@@ -1,9 +1,19 @@
 package com.quartz.common.scheduler;
 
 import com.quartz.common.config.SchedulerConfiguration;
+import lombok.Getter;
+import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
-import org.quartz.*;
+import org.quartz.CronScheduleBuilder;
+import org.quartz.JobBuilder;
+import org.quartz.JobDataMap;
+import org.quartz.JobDetail;
+import org.quartz.ScheduleBuilder;
+import org.quartz.Scheduler;
+import org.quartz.SchedulerException;
+import org.quartz.Trigger;
+import org.quartz.TriggerBuilder;
 import org.quartz.plugins.interrupt.JobInterruptMonitorPlugin;
 
 import java.util.Date;
@@ -11,25 +21,28 @@ import java.util.stream.Collectors;
 
 /**
  * Quartz Scheduler is for initializing job/triggers, starting and stopping gracefully quartz scheduler
+ * <p>
+ *     If scheduler is enabled then it will generate jobs -> triggers and start the quartz scheduler
+ *     Cron: <a href="https://productresources.collibra.com/docs/collibra/latest/Content/Cron/co_quartz-cron-syntax.htm">Quartz CRON Syntax</a>
  */
+@RequiredArgsConstructor
 @Slf4j
 public class QuartzScheduler implements AutoCloseable {
-    private Scheduler scheduler;
-    private SchedulerConfiguration schedulerConfiguration;
-
+    @Getter
+    private final Scheduler scheduler;
+    private final SchedulerConfiguration schedulerConfiguration;
 
     /**
      * If scheduler is enabled then it will generate jobs -> triggers and start the quartz scheduler
-     *
      */
-    public void init() throws SchedulerException {
+    public void start() throws SchedulerException {
         if (!schedulerConfiguration.enabled()) {
             log.info("Job/trigger initialization and scheduler was disabled");
             return;
         }
         schedulerConfiguration.groups().forEach(
                 (jobGroupKey, jobGroup) -> {
-                    final var jobGroupName = jobGroup.name().orElse(jobGroupKey);
+                    final String jobGroupName = jobGroup.name().orElse(jobGroupKey);
                     log.info("Job Group: {} with {} jobs will be created", jobGroupName, jobGroup.jobs().size());
                     jobGroup.jobs().forEach((jobKey, job) -> scheduleJob(jobGroupName, jobKey, job));
                 }
@@ -54,7 +67,11 @@ public class QuartzScheduler implements AutoCloseable {
         log.info("Job: {} with {} triggers will be created or updated.", jobDetail.getKey(), triggers.size());
 
         scheduler.addJob(jobDetail, true, true);
-        scheduler.scheduleJob(jobDetail, triggers, true);
+        try {
+            scheduler.scheduleJob(jobDetail, triggers, true);
+        } catch (SchedulerException e) {
+            log.error("Error occurred while scheduling job: {}", jobDetail.getKey(), e);
+        }
     }
 
     /**
@@ -65,7 +82,8 @@ public class QuartzScheduler implements AutoCloseable {
      * @param job          details of the job
      * @return new job detail
      */
-    private JobDetail generateJobDetail(String jobGroupName, String jobKey, SchedulerConfiguration.JobGroup.JobDetail job) {
+    private JobDetail generateJobDetail(String jobGroupName, String
+            jobKey, SchedulerConfiguration.JobGroup.JobDetail job) {
         var jobDataMap = new JobDataMap();
         if (job.interruptionEnabled()) {
             jobDataMap.put(JobInterruptMonitorPlugin.AUTO_INTERRUPTIBLE, "true");
@@ -86,7 +104,8 @@ public class QuartzScheduler implements AutoCloseable {
      * @param trigger    details of the trigger
      * @return new trigger
      */
-    private Trigger generateTrigger(JobDetail jobDetail, String triggerKey, SchedulerConfiguration.JobGroup.JobDetail.Trigger trigger) {
+    private Trigger generateTrigger(JobDetail jobDetail, String
+            triggerKey, SchedulerConfiguration.JobGroup.JobDetail.Trigger trigger) {
         return TriggerBuilder
                 .newTrigger()
                 .forJob(jobDetail)
@@ -95,10 +114,9 @@ public class QuartzScheduler implements AutoCloseable {
                         .orElseGet(Date::new)) // if the start date is null, it will start immediately
                 .withIdentity(trigger.name().orElse(triggerKey), jobDetail.getKey().getGroup())
                 .withDescription(trigger.description().orElse(null))
-                .withSchedule(
-                        CronScheduleBuilder.cronSchedule(trigger.cron())
-                                .withMisfireHandlingInstructionDoNothing()
-                ).build();
+                .withSchedule(generate(trigger.schedule()))
+                .withPriority(trigger.priority())
+                .build();
     }
 
     /**
@@ -114,5 +132,25 @@ public class QuartzScheduler implements AutoCloseable {
             scheduler.shutdown(true);
             log.info("Scheduler stopped successfully");
         }
+    }
+
+    private ScheduleBuilder<?> generate(SchedulerConfiguration.JobGroup.JobDetail.Trigger.Schedule schedule) {
+        return switch (schedule.type()) {
+            case CRON -> generate((SchedulerConfiguration.JobGroup.JobDetail.Trigger.CronSchedule) schedule);
+            default -> throw new IllegalStateException("Not implemented scheduler type: " + schedule.type());
+        };
+    }
+
+    private ScheduleBuilder<?> generate(SchedulerConfiguration.JobGroup.JobDetail.Trigger.CronSchedule schedule) {
+        final CronScheduleBuilder cronScheduleBuilder = CronScheduleBuilder
+                .cronSchedule(schedule.expression())
+                .inTimeZone(schedule.timezone());
+
+        switch (schedule.misfireInstruction()) {
+            case IGNORE -> cronScheduleBuilder.withMisfireHandlingInstructionIgnoreMisfires();
+            case DO_NOTHING -> cronScheduleBuilder.withMisfireHandlingInstructionDoNothing();
+            case FIRE_NOW -> cronScheduleBuilder.withMisfireHandlingInstructionFireAndProceed();
+        }
+        return cronScheduleBuilder;
     }
 }
