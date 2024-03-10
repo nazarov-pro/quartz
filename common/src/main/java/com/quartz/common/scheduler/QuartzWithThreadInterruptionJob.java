@@ -13,15 +13,15 @@ public abstract class QuartzWithThreadInterruptionJob implements QuartzInterrupt
 
     @Override
     public void execute(JobExecutionContext context) throws JobExecutionException {
-        currentThread = Thread.currentThread();
+        this.currentThread = Thread.currentThread();
         executeWithThreadInterruption(context);
     }
 
     @Override
     public void interrupt() {
-        if (currentThread != null && !currentThread.isInterrupted()) {
+        if (this.currentThread != null && !this.currentThread.isInterrupted()) {
             log.info("Trying to interrupt the job");
-            currentThread.interrupt();
+            this.currentThread.interrupt();
         }
     }
 }

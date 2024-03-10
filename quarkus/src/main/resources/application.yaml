@@ -1,13 +1,25 @@
+app:
+  quartz:
+    config-path: scheduler.json
 quarkus:
   quartz:
     clustered: true
+    cluster-checkin-interval: 5000
+    instance-name: QuartzScheduler
     store-type: jdbc-cmt
-    misfire-policy:
-      task-job: ignore-misfire-policy
+    datasource: scheduler
+    start-mode: halted
+    plugins:
+      job-interrupter:
+        class: org.quartz.plugins.interrupt.JobInterruptMonitorPlugin
+        properties:
+          defaultMaxRunTime: 60000
   #datasource configuration
   datasource:
-    db-kind: postgresql
-    username: postgres
-    password: postgre
-    jdbc:
-      url: jdbc:postgresql://localhost:5432/quarkus
+    scheduler:
+      db-kind: postgresql
+      username: postgres
+      password: postgre$
+      jdbc:
+        driver: org.postgresql.Driver
+        url: jdbc:postgresql://localhost:5432/postgres_db?currentSchema=scheduler

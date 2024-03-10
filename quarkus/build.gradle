@@ -1,8 +1,15 @@
+plugins {
+    id("io.quarkus") version "3.8.2"
+}
+
 dependencies {
     implementation project(':common')
-    //postgres
-    implementation 'org.postgresql:postgresql:42.2.23'
-    implementation("io.quarkus:quarkus-quartz")
+
+    implementation(enforcedPlatform("io.quarkus.platform:quarkus-bom:3.8.2"))
+    implementation("io.quarkus:quarkus-config-yaml:3.8.2")
+    implementation("io.quarkus:quarkus-agroal:3.8.2")
+    implementation("io.quarkus:quarkus-jdbc-postgresql:3.8.2")
+    implementation("io.quarkus:quarkus-quartz:3.8.2")
 
     compileOnly 'org.projectlombok:lombok:1.18.30'
     annotationProcessor 'org.projectlombok:lombok:1.18.30'
